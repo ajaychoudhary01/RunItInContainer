@@ -1,4 +1,4 @@
-FROM microsoft/dotnet:2.1-aspnetcore-runtime AS base
+FROM microsoft/dotnet:2.1-sdk AS base
 WORKDIR /app
 COPY . ./
 
@@ -7,12 +7,12 @@ RUN dotnet restore
 #RUN dotnet test /app/Motix.Microservice.Billing.Tests/Motix.Microservice.Billing.Tests.csproj
 
 # copy everything else and build
-WORKDIR /app/RunItInContainer/RunItInContainer
+WORKDIR /app/RunItInContainer
 RUN dotnet publish -c Release -o out
 
 # build runtime image
-FROM base AS final
+FROM microsoft/dotnet:2.1-aspnetcore-runtime
 ENV ASPNETCORE_ENVIRONMENT="Development"
 WORKDIR /app
-COPY --from=build-env /app/RunItInContainer/RunItInContainer/out .
+COPY --from=base /app/RunItInContainer/out .
 ENTRYPOINT ["dotnet", "RunItInContainer.dll"]
