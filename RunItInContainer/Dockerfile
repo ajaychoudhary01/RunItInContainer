@@ -1,19 +1,18 @@
-FROM microsoft/dotnet:2.1-aspnetcore-runtime AS base
+FROM microsoft/dotnet:2.1-sdk AS base
 WORKDIR /app
-EXPOSE 80
+COPY . ./
 
-FROM microsoft/dotnet:2.1-sdk AS build
-WORKDIR /src
-COPY ["RunItInContainer/RunItInContainer.csproj", "RunItInContainer/"]
-RUN dotnet restore "RunItInContainer/RunItInContainer.csproj"
-COPY . .
-WORKDIR "/src/RunItInContainer"
-RUN dotnet build "RunItInContainer.csproj" -c Release -o /app
+# copy csproj and restore as distinct layers
+RUN dotnet restore
+#RUN dotnet test /app/Motix.Microservice.Billing.Tests/Motix.Microservice.Billing.Tests.csproj
 
-FROM build AS publish
-RUN dotnet publish "RunItInContainer.csproj" -c Release -o /app
+# copy everything else and build
+WORKDIR /app/RunItInContainer
+RUN dotnet publish -c Release -o out
 
-FROM base AS final
+# build runtime image
+FROM microsoft/dotnet:2.1-aspnetcore-runtime
+ENV ASPNETCORE_ENVIRONMENT="Development"
 WORKDIR /app
-COPY --from=publish /app .
+COPY --from=base /app/RunItInContainer/out .
 ENTRYPOINT ["dotnet", "RunItInContainer.dll"]
